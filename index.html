@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Warzone Overlook Tower Specialist Vault Combination Generator</title>
+  <style>
+    :root {
+      --bg-color: #121212;
+      --text-color: #e0e0e0;
+      --current-color: #1e90ff;
+      --combo-bg: #1e1e1e;
+      --input-bg: #2a2a2a;
+      --input-border: #444;
+      --shadow: rgba(0, 0, 0, 0.5);
+    }
+    body {
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+    body.light {
+      --bg-color: #f5f5f5;
+      --text-color: #333;
+      --current-color: #007bff;
+      --combo-bg: #fff;
+      --input-bg: #fff;
+      --input-border: #ccc;
+      --shadow: rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #theme-toggle {
+      background: none;
+      border: 1px solid var(--input-border);
+      color: var(--text-color);
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s, color 0.3s;
+    }
+    .inputs { display: flex; gap: 16px; margin: 16px 0; }
+    .field-container { display: flex; flex-direction: column; align-items: center; }
+    .field-container .msg { color: #ff6b6b; font-size: 12px; height: 16px; }
+    .field-container input {
+      width: 40px;
+      height: 40px;
+      font-size: 20px;
+      text-align: center;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 4px;
+      color: var(--text-color);
+      box-shadow: 0 2px 4px var(--shadow);
+      transition: background 0.3s, border 0.3s;
+    }
+    .inputs input.current { outline: 2px solid #ff4757; }
+    #current-combo {
+      font-size: 72px;
+      font-weight: bold;
+      text-align: center;
+      margin: 20px 0;
+      color: var(--current-color);
+    }
+    #cycle-instruction { text-align: center; font-size: 14px; color: var(--text-color); }
+    #results { padding-top: 16px; }
+    .combo {
+      background: var(--combo-bg);
+      padding: 6px 10px;
+      margin: 4px;
+      border-radius: 4px;
+      display: inline-block;
+      cursor: pointer;
+      box-shadow: 0 1px 3px var(--shadow);
+      transition: background 0.3s;
+      color: var(--text-color);
+    }
+    .combo.used { color: #777; }
+    #total { margin-top: 12px; font-weight: bold; }
+    .instructions { margin-top: 24px; font-size: 14px; color: var(--text-color); }
+    .description { font-size: 16px; color: var(--text-color); }
+  </style>
+
+<body>
+  <div class="header">
+    <h1>Warzone Overlook Tower Specialist Vault Combination Generator</h1>
+    <button id="theme-toggle">Light Mode</button>
+  </div>
+  <p class="description">Enter at least three digits (1–9) in the fields below. Unknown entries auto-convert to ‘*’. Once three digits are entered, valid unique 6-digit combinations will appear. Click any combo to mark it as used.</p>
+  <div class="inputs">
+    <div class="field-container"><div class="msg" id="msg-0"></div><input id="c0" maxlength="1" autofocus></div>
+    <div class="field-container"><div class="msg" id="msg-1"></div><input id="c1" maxlength="1"></div>
+    <div class="field-container"><div class="msg" id="msg-2"></div><input id="c2" maxlength="1"></div>
+    <div class="field-container"><div class="msg" id="msg-3"></div><input id="c3" maxlength="1"></div>
+    <div class="field-container"><div class="msg" id="msg-4"></div><input id="c4" maxlength="1"></div>
+    <div class="field-container"><div class="msg" id="msg-5"></div><input id="c5" maxlength="1"></div>
+  </div>
+  <div id="current-combo"></div>
+  <div id="cycle-instruction"></div>
+  <div id="results"></div>
+  <div id="total"></div>
+  <div class="instructions">
+    <strong>Instructions:</strong><br>
+    - Type digits 1–9; letters and any character besides numbers become ‘*’.<br>
+    - Typing replaces field content; duplicates clear previous with notice.<br>
+    - Cursor auto-advances; use ←/→ to navigate.<br>
+    - Backspace moves to previous field when empty.<br>
+    - Combos appear after 3 entries.<br>
+    - Click combos to toggle grey-out.<br>
+    - Press SPACE to cycle through combos, marking each as used.<br>
+  </div>
+
+  <script>
+    const toggle = document.getElementById('theme-toggle');
+    toggle.addEventListener('click', () => {
+      document.body.classList.toggle('light');
+      toggle.textContent = document.body.classList.contains('light') ? 'Dark Mode' : 'Light Mode';
+    });
+
+    const inputs = Array.from({length: 6}, (_, i) => document.getElementById('c' + i));
+    const msgs = Array.from({length: 6}, (_, i) => document.getElementById('msg-' + i));
+    const currentDiv = document.getElementById('current-combo');
+    const cycleInstr = document.getElementById('cycle-instruction');
+    const resultsDiv = document.getElementById('results');
+    const totalDiv = document.getElementById('total');
+    let currentIdx = 0, combos = [], cycleIndex = 0;
+
+  window.onload = function() {
+    var ads = document.querySelectorAll('div[style*="tiiny.host/assets/img/ad.png"]');
+    ads.forEach(ad => ad.style.display = 'none');
+  };
+
+    function updateCurrentField() {
+      inputs.forEach((inp, i) => inp.classList.toggle('current', i === currentIdx));
+      inputs[currentIdx].focus();
+    }
+    window.addEventListener('load', () => { currentIdx = 0; updateCurrentField(); });
+
+    inputs.forEach((input, idx) => {
+      input.addEventListener('keydown', e => {
+        // ignore space so it doesn't clear field
+        if (e.key === ' ') { e.preventDefault(); return; }
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) e.target.value = '';
+        if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+          currentIdx = idx - 1; updateCurrentField(); e.preventDefault();
+        }
+        if (e.key === 'ArrowLeft' && idx > 0) {
+          currentIdx = idx - 1; updateCurrentField(); e.preventDefault();
+        }
+        if (e.key === 'ArrowRight' && idx < 5) {
+          currentIdx = idx + 1; updateCurrentField(); e.preventDefault();
+        }
+      });
+      input.addEventListener('input', e => {
+        msgs.forEach(m => m.textContent = '');
+        let val = e.target.value;
+        if (!/^[1-9]$/.test(val)) { val = val ? '*' : ''; e.target.value = val; }
+        else inputs.forEach((other, j) => {
+          if (j !== idx && other.value === val) {
+            other.value = ''; msgs[j].textContent = `Cleared duplicate ${val}`;
+          }
+        });
+        if (val && idx < 5) currentIdx = idx + 1;
+        updateCurrentField();
+        if (inputs.filter(i => i.value).length >= 3) generateCombinations();
+      });
+    });
+
+    function generateCombinations() {
+      const pattern = inputs.map(inp => inp.value || 'x').join('');
+      const used = new Set(); const positions = [];
+      pattern.split('').forEach((ch,i) => /[1-9]/.test(ch) ? used.add(ch) : positions.push(i));
+      const pool = Array.from({length:9},(_,i) => String(i+1)).filter(d => !used.has(d));
+      combos = [];
+      (function backtrack(idx, arr) {
+        if (idx === positions.length) { combos.push(arr.join('')); return; }
+        const pos = positions[idx];
+        for (const d of pool) {
+          if (!arr.includes(d)) {
+            arr[pos] = d;
+            backtrack(idx + 1, arr);
+            arr[pos] = null;
+          }
+        }
+      })(0, pattern.split('').map(ch => /[1-9]/.test(ch) ? ch : null));
+
+      cycleIndex = 0;
+      resultsDiv.innerHTML = combos.map((code, i) => `<div class="combo" data-index="${i}" onclick="this.classList.toggle('used')">${code}</div>`).join('');
+      totalDiv.textContent = `Total combinations: ${combos.length}`;
+      if (combos.length) {
+        currentDiv.textContent = combos[0];
+        cycleInstr.textContent = 'Press SPACE to see next combination';
+      } else {
+        currentDiv.textContent = '';
+        cycleInstr.textContent = '';
+      }
+    }
+
+    window.addEventListener('keydown', e => {
+      if (e.code === 'Space' && combos.length) {
+        const prev = resultsDiv.querySelector(`.combo[data-index="${cycleIndex}"]`);
+        if (prev) prev.classList.add('used');
+        cycleIndex = (cycleIndex + 1) % combos.length;
+        currentDiv.textContent = combos[cycleIndex];
+        e.preventDefault();
+      }
+    });
+  </script>
+</body>
+</html>
