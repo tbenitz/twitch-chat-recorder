@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Kanit&display=swap" rel="stylesheet">
+  <title>Twitch Chat Overlay</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    #chat {
+      position: absolute;
+      margin-top: 55px;
+      width:85%;
+      bottom: 50px;
+      margin-right: 50px;
+      max-height: 85%;
+      overflow-y: auto;
+    }
+    #chat li {
+      transition: border-color 0.3s ease-in-out, color 0.3s ease-in-out;
+    }
+    #chat li:hover {
+      border-color: #ff9900;
+      color: var(--hover-font-color);
+    }
+  #exportButton {
+    position: fixed;
+    top: 300px;
+    right: 20px;
+    z-index: 9999;
+    padding: 10px;
+    background-color: #ff9900;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+  
+
+
+title {
+  position: fixed;
+}
+
+body {
+  background-color: #555555; /* Replace with your desired color */
+}
+
+
+h1 {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: transparent;
+  padding: 10px;
+  z-index: 9999;
+}
+
+
+#autoSaveCheckbox,
+label[for="autoSaveCheckbox"] {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 32%;
+  background-color: #ffffff;
+  padding: 10px;
+  z-index: 9998;
+}
+
+#saveButton {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 50%;
+  background-color: #D3D3D3;
+  padding: 10px;
+  z-index: 10025;
+}
+
+
+#autoSaveSelect {
+  position: fixed;
+  bottom: 0;
+  left: 85px;
+  width: 10%;
+  background-color: #ffffff;
+  padding: 10px;
+  z-index: 10005;
+}
+
+#colorChanger {
+  position: fixed;
+  bottom: 55px; /* Adjust this value as needed */
+  right: 10px;
+}
+
+#scoreboard {
+  max-height: calc(90% - 65px);
+  overflow-y: auto;
+}
+
+
+.scoreboard-item {
+  font-family: "Kanit", Arial, sans-serif;
+  font-size: 14px;
+   font-weight: bold;
+}
+
+
+.scoreboard-item-bold {
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  font-weight: normal;
+ 
+}
+
+
+  </style>
+</head>
+<body>
+  <div id="position"></div>
+  <div id="chat">
+    
+    <ul></ul>
+  </div>
+
+    <input type="color" id="colorChanger" value="#ffffff">
+
+
+  <button id="saveButton">Save Chat</button>
+  <label for="autoSaveCheckbox">Auto-Save </label>
+  <select id="autoSaveSelect">
+    <option value="3600000">1 hour</option>
+    <option value="7200000">2 hours</option>
+    <option value="14400000">4 hours</option>
+    <option value="21600000">6 hours</option>
+    <option value="43200000">12 hours</option>
+    <option value="86400000">24 hours</option>
+  </select>
+  <input type="checkbox" id="autoSaveCheckbox">
+  
+<button id="exportButton">Export HTML</button>
+
+  <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.js"></script>
+  <script>
+    const chat = document.querySelector("#chat > ul");
+    const saveButton = document.querySelector("#saveButton");
+    let chatMessages = [];
+    const twitchID = prompt("Enter your Twitch channel ID:") || "";
+    document.title = `${twitchID}'s TwitchTV Chat`;
+    // const twitchID = prompt("Enter your Twitch channel ID:");
+    const exportButton = document.querySelector("#exportButton");
+
+exportButton.addEventListener("click", () => {
+  const updatedHTML = document.documentElement.outerHTML.replace(/YOUR_TWITCH_CHANNEL_ID/g, twitchID);
+  const chatElement = document.querySelector("#chat");
+  const htmlContent = updatedHTML.replace(/const twitchID = prompt\("Enter your Twitch channel ID:"\) \|\| "";/, `const twitchID = "${twitchID}";`);
+  const cleanedHTML = htmlContent.replace(/<button id="exportButton">Export HTML<\/button>/g, '<button id="exportButton" style="display: none;">Export HTML</button>');
+  const cleanerHTML = cleanedHTML.replace(/<li[^>]*>.*?<\/li>/g, "");
+  const fileName = `${twitchID}_chat.html`;
+  const element = document.createElement("a");
+  element.setAttribute("href", "data:text/html;charset=utf-8," + encodeURIComponent(cleanerHTML));
+  element.setAttribute("download", fileName);
+  element.style.display = "none";
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
+});
+
+
+
+    function getRandomColor() {
+      const letters = "0123456789ABCDEF";
+      let color = "#";
+      for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(16 * Math.random())];
+      }
+      return color;
+    }
+
+function addHoverEffect() {
+  chatMessages = document.querySelectorAll("#chat li");
+  document.title = document.querySelector("h1").textContent;
+  chatMessages.forEach((message) => {
+    message.addEventListener("mouseover", () => {
+      const randomColor = getRandomColor();
+      message.style.borderColor = randomColor;
+      message.style.setProperty("--hover-font-color", getRandomColor());
+    });
+    message.addEventListener("mouseout", () => {
+      message.style.borderColor = "";
+      message.style.color = "";
+    });
+  });
+
+  // Scroll to the bottom of the chat if close to the bottom
+  if (shouldScrollToBottom()) {
+    chat.scrollTop = chat.scrollHeight;
+  }
+}
+
+
+
+function saveChatToFile() {
+  // Format the chat messages
+  const messagesText = Array.from(chat.getElementsByTagName('li'))
+    .map((message) => message.textContent)
+    .join('\n');
+
+  // Format the scoreboard
+  const sortedUsers = Object.keys(scoreboard).sort((a, b) => scoreboard[b] - scoreboard[a]);
+  const scoreboardText = sortedUsers.map((user) => `${user}: ${scoreboard[user]} messages`).join('\n');
+  
+  // Calculate total messages
+  const totalMessages = Object.values(scoreboard).reduce((total, count) => total + count, 0);
+  
+  // Calculate average messages per minute
+  const currentTime = new Date();
+  const elapsedMinutes = Math.floor((currentTime - startTime) / (1000 * 60)); // Convert milliseconds to minutes
+  const averageMessagesPerMinute = totalMessages / elapsedMinutes;
+
+  // Combine the chat messages and the scoreboard
+  const textContent = `Twitch Channel: ${twitchID} Chat\n\n${messagesText}\n\nScoreboard:\n${scoreboardText}\n\nTotal Messages: ${totalMessages}\nAverage Messages per Minute: ${averageMessagesPerMinute}`;
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const fileName = `${twitchID}s_chat_${timestamp}.txt`;
+  const element = document.createElement('a');
+  element.setAttribute('href', `data:text/plain;charset=utf-8,${encodeURIComponent(textContent)}`);
+  element.setAttribute('download', fileName);
+  element.style.display = 'none';
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
+}
+
+
+
+    saveButton.addEventListener("click", saveChatToFile);
+
+    const autoSaveCheckbox = document.querySelector("#autoSaveCheckbox");
+    const autoSaveSelect = document.querySelector("#autoSaveSelect");
+
+    autoSaveCheckbox.addEventListener("change", () => {
+      if (autoSaveCheckbox.checked) {
+        const selectedInterval = parseInt(autoSaveSelect.value, 10);
+        setInterval(saveChatToFile, selectedInterval);
+      } else {
+        clearInterval();
+      }
+    });
+
+    const twitchNameContainer = document.createElement("h1");
+    twitchNameContainer.textContent = `${twitchID}'s TwitchTV Chat`;
+    twitchNameContainer.style.textAlign = "center";
+    document.body.prepend(twitchNameContainer);
+    
+        const colorChanger = document.querySelector("#colorChanger");
+
+    colorChanger.addEventListener("input", () => {
+      document.body.style.backgroundColor = colorChanger.value;
+    });
+    
+    
+    const scoreboard = {};
+
+
+
+
+
+
+const startTime = new Date();
+
+
+
+function updateScoreboard(user) {
+  if (!scoreboard[user]) {
+    scoreboard[user] = 0;
+  }
+  scoreboard[user]++;
+
+  const scoreboardElement = document.getElementById('scoreboard');
+  const sortedUsers = Object.keys(scoreboard).sort((a, b) => scoreboard[b] - scoreboard[a]);
+  scoreboardElement.innerHTML = '';
+
+  // Calculate total messages
+  const totalMessages = Object.values(scoreboard).reduce((total, count) => total + count, 0);
+
+  // Calculate average messages per minute
+  const currentTime = new Date();
+  const elapsedSeconds = Math.floor((currentTime - startTime) / 1000); // Convert milliseconds to seconds
+  const averageMessagesPerMinute = (totalMessages / elapsedSeconds) * 60;
+
+  // Add the total messages count
+  const totalMessagesItem = document.createElement('li');
+  totalMessagesItem.textContent = 'Total Messages: ';
+  const totalMessagesValue = document.createElement('span');
+  totalMessagesValue.textContent = totalMessages;
+  totalMessagesItem.appendChild(totalMessagesValue);
+  totalMessagesItem.classList.add('scoreboard-item');
+  scoreboardElement.appendChild(totalMessagesItem);
+
+  // Add the average messages per minute
+  const averageMessagesItem = document.createElement('li');
+  averageMessagesItem.textContent = 'Messages per Minute: ';
+  const averageMessagesValue = document.createElement('span');
+  averageMessagesValue.textContent = averageMessagesPerMinute.toFixed(2);
+  averageMessagesItem.appendChild(averageMessagesValue);
+  averageMessagesItem.classList.add('scoreboard-item');
+  scoreboardElement.appendChild(averageMessagesItem);
+
+  // Add the unique chatters count
+  const uniqueChatters = Object.keys(scoreboard).length;
+  const uniqueChattersItem = document.createElement('li');
+  uniqueChattersItem.textContent = 'Unique Chatters: ';
+  const uniqueChattersValue = document.createElement('span');
+  uniqueChattersValue.textContent = uniqueChatters;
+  uniqueChattersItem.appendChild(uniqueChattersValue);
+  uniqueChattersItem.classList.add('scoreboard-item');
+  scoreboardElement.appendChild(uniqueChattersItem);
+
+  sortedUsers.forEach((user) => {
+    const scoreItem = document.createElement('li');
+    scoreItem.textContent = `${user}: ${scoreboard[user]} messages`;
+    scoreItem.classList.add('scoreboard-item-bold');
+    scoreboardElement.appendChild(scoreItem);
+  });
+}
+
+
+
+
+
+
+
+
+
+
+ 
+    const scoreboardElement = document.createElement('ul');
+scoreboardElement.id = 'scoreboard';
+scoreboardElement.style.position = 'fixed';
+scoreboardElement.style.top = '10px';
+scoreboardElement.style.right = '10px';
+scoreboardElement.style.listStyle = 'none';
+scoreboardElement.style.padding = '0';
+scoreboardElement.style.margin = '0';
+document.body.appendChild(scoreboardElement);
+
+
+ 
+ 
+ 
+
+
+
+
+let isAutoScrollEnabled = true;
+
+chat.addEventListener('scroll', () => {
+  isAutoScrollEnabled = shouldScrollToBottom();
+  console.log('shouldScrollToBottom:', isAutoScrollEnabled);
+});
+
+function shouldScrollToBottom() {
+  const { scrollTop, clientHeight, scrollHeight } = chat;
+  const scrollThreshold = 50; // Adjust this value as needed
+
+  return scrollHeight - (scrollTop + clientHeight) <= scrollThreshold;
+}
+
+const messageThreshold = 5;
+const messageHistory = new Map();
+
+const onChat = (user, message, flags, self, extra) => {
+  const newMessage = document.createElement("li");
+  const timestamp = new Date().toLocaleTimeString();
+  newMessage.innerHTML = `<span class="username">${user}</span> <span class="timestamp">${timestamp}</span> <span class="message">${message}</span>`;
+  const randomColor = getRandomColor();
+  newMessage.style.color = randomColor;
+
+  // Update message history
+  if (!messageHistory.has(message)) {
+    messageHistory.set(message, 1);
+  } else {
+    const count = messageHistory.get(message);
+    messageHistory.set(message, count + 1);
+  }
+
+  // Check if the message count exceeds the threshold
+  if (messageHistory.get(message) >= messageThreshold) {
+    newMessage.style.color = "black";
+    newMessage.style.fontWeight = "bold";
+    newMessage.style.fontSize = "16px";
+  }
+
+  // Update scoreboard
+  updateScoreboard(user);
+
+  // Append the new message
+  chat.appendChild(newMessage);
+
+  // Scroll to the bottom of the chat if auto-scroll is enabled
+  if (isAutoScrollEnabled) {
+   // prompt("hi:"+${isAutoScrollEnabled})
+    newMessage.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }
+};
+
+
+
+
+// Function to update the scroll position display
+function updateScrollPosition() {
+  const scrollPosition = document.getElementById("scrollPosition");
+  const position = calculateScrollPosition();
+  scrollPosition.textContent = `Scroll Position: ${position}`;
+}
+
+// Calculate the scroll position
+function calculateScrollPosition() {
+  if (window.pageYOffset !== undefined) {
+    return `X-axis: ${window.pageXOffset}px, Y-axis: ${window.pageYOffset}px`;
+  } else {
+    let x_axis, y_axis, doc = document, ele = doc.documentElement, b = doc.body;
+    x_axis = ele.scrollLeft || b.scrollLeft || 0;
+    y_axis = ele.scrollTop || b.scrollTop || 0;
+    return `X-axis: ${x_axis}px, Y-axis: ${y_axis}px`;
+  }
+}
+
+// Attach scroll event listener to update scroll position display
+window.addEventListener("scroll", updateScrollPosition);
+
+// Update scroll position display on initial load
+window.addEventListener("load", updateScrollPosition);
+
+
+
+
+ComfyJS.onChat = onChat;
+ComfyJS.Init(twitchID);
+
+
+    
+  
+  window.onload = function() {
+    var ads = document.querySelectorAll('div[style*="tiiny.host/assets/img/ad.png"]');
+    ads.forEach(ad => ad.style.display = 'none');
+  };
+
+
+
+  </script>
+</body>
+</html>
